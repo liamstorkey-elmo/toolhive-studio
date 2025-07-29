@@ -127,6 +127,20 @@ export type ClientMcpClientStatus = {
 }
 
 /**
+ * IgnoreConfig contains configuration for ignore processing
+ */
+export type IgnoreConfig = {
+  /**
+   * Whether to load global ignore patterns
+   */
+  loadGlobal?: boolean
+  /**
+   * Whether to print resolved overlay paths for debugging
+   */
+  printOverlays?: boolean
+}
+
+/**
  * Network defines network permissions
  */
 export type PermissionsNetworkPermissions = {
@@ -373,6 +387,7 @@ export type RunnerRunConfig = {
    * Host is the host for the HTTP proxy
    */
   host?: string
+  ignore_config?: IgnoreConfig
   /**
    * Image is the Docker image to run
    */
@@ -441,6 +456,11 @@ export type RunnerRunConfig = {
    */
   volumes?: Array<string>
 }
+
+/**
+ * Status is the current status of the workload.
+ */
+export type RuntimeWorkloadStatus = string
 
 export type SecretsSecretParameter = {
   name?: string
@@ -898,7 +918,7 @@ export type WorkloadsWorkload = {
    * This is embedded in the URL.
    */
   port?: number
-  status?: WorkloadsWorkloadStatus
+  status?: RuntimeWorkloadStatus
   /**
    * StatusContext provides additional context about the workload's status.
    * The exact meaning is determined by the status and the underlying runtime.
@@ -919,11 +939,6 @@ export type WorkloadsWorkload = {
    */
   url?: string
 }
-
-/**
- * Status is the current status of the workload.
- */
-export type WorkloadsWorkloadStatus = string
 
 export type GetApiOpenapiJsonData = {
   body?: never
