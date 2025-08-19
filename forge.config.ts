@@ -149,7 +149,7 @@ const config: ForgeConfig = {
         icon: './icons/icon.png',
         depends: [],
         maintainer: 'Stacklok',
-        homepage: 'https://github.com/stacklok/toolhive-studio',
+        homepage: 'https://github.com/liamstorkey-elmo/toolhive-studio',
         section: 'devel',
         bin: 'ToolHive',
       },
