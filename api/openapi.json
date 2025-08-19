@@ -140,7 +140,8 @@
           "AmpVSCode",
           "AmpCursor",
           "AmpVSCodeInsider",
-          "AmpWindsurf"
+          "AmpWindsurf",
+          "ClaudeDesktop"
         ]
       },
       "client.MCPClientStatus": {
@@ -162,7 +163,8 @@
               "AmpVSCode",
               "AmpCursor",
               "AmpVSCodeInsider",
-              "AmpWindsurf"
+              "AmpWindsurf",
+              "ClaudeDesktop"
             ]
           },
           "installed": {
@@ -519,7 +521,6 @@
             "description": "Host is the host for the HTTP proxy",
             "type": "string"
           },
-          "ignore_config": { "$ref": "#/components/schemas/ignore.Config" },
           "image": {
             "description": "Image is the Docker image to run",
             "type": "string"
@@ -539,12 +540,6 @@
           "k8s_pod_template_patch": {
             "description": "K8sPodTemplatePatch is a JSON string to patch the Kubernetes pod template\nOnly applicable when using Kubernetes runtime",
             "type": "string"
-          },
-          "middleware_configs": {
-            "description": "MiddlewareConfigs contains the list of middleware to apply to the transport\nand the configuration for each middleware.",
-            "items": { "$ref": "#/components/schemas/types.MiddlewareConfig" },
-            "type": "array",
-            "uniqueItems": false
           },
           "name": {
             "description": "Name is the name of the MCP server",
@@ -611,20 +606,6 @@
         },
         "type": "object"
       },
-      "runtime.WorkloadStatus": {
-        "description": "Status is the current status of the workload.",
-        "type": "string",
-        "x-enum-varnames": [
-          "WorkloadStatusRunning",
-          "WorkloadStatusStopped",
-          "WorkloadStatusError",
-          "WorkloadStatusStarting",
-          "WorkloadStatusStopping",
-          "WorkloadStatusUnhealthy",
-          "WorkloadStatusRemoving",
-          "WorkloadStatusUnknown"
-        ]
-      },
       "secrets.SecretParameter": {
         "properties": {
           "name": { "type": "string" },
@@ -667,19 +648,6 @@
           },
           "serviceVersion": {
             "description": "ServiceVersion is the service version for telemetry",
-            "type": "string"
-          }
-        },
-        "type": "object"
-      },
-      "types.MiddlewareConfig": {
-        "properties": {
-          "parameters": {
-            "description": "Parameters is a JSON object containing the middleware parameters.\nIt is stored as a raw message to allow flexible parameter types.",
-            "type": "object"
-          },
-          "type": {
-            "description": "Type is a string representing the middleware type.",
             "type": "string"
           }
         },
@@ -757,7 +725,11 @@
                 "VSCodeInsider",
                 "VSCode",
                 "ClaudeCode",
+<<<<<<< HEAD
                 "ClaudeDesktop",
+=======
+<<<<<<< HEAD:api/openapi.json
+>>>>>>> 8df9644 (build)
                 "Windsurf",
                 "WindsurfJetBrains",
                 "AmpCli",
@@ -765,6 +737,9 @@
                 "AmpCursor",
                 "AmpVSCodeInsider",
                 "AmpWindsurf"
+=======
+                "ClaudeDesktop"
+>>>>>>> 14530c6 (build):renderer/src/common/api/openapi.json
               ]
             },
             "type": "array",
@@ -816,7 +791,11 @@
               "VSCodeInsider",
               "VSCode",
               "ClaudeCode",
+<<<<<<< HEAD
               "ClaudeDesktop",
+=======
+<<<<<<< HEAD:api/openapi.json
+>>>>>>> 8df9644 (build)
               "Windsurf",
               "WindsurfJetBrains",
               "AmpCli",
@@ -824,6 +803,9 @@
               "AmpCursor",
               "AmpVSCodeInsider",
               "AmpWindsurf"
+=======
+              "ClaudeDesktop"
+>>>>>>> 14530c6 (build):renderer/src/common/api/openapi.json
             ]
           }
         },
@@ -847,7 +829,11 @@
               "VSCodeInsider",
               "VSCode",
               "ClaudeCode",
+<<<<<<< HEAD
               "ClaudeDesktop",
+=======
+<<<<<<< HEAD:api/openapi.json
+>>>>>>> 8df9644 (build)
               "Windsurf",
               "WindsurfJetBrains",
               "AmpCli",
@@ -855,6 +841,9 @@
               "AmpCursor",
               "AmpVSCodeInsider",
               "AmpWindsurf"
+=======
+              "ClaudeDesktop"
+>>>>>>> 14530c6 (build):renderer/src/common/api/openapi.json
             ]
           }
         },
@@ -1218,6 +1207,75 @@
           }
         },
         "type": "object"
+<<<<<<< HEAD:api/openapi.json
+=======
+      },
+      "workloads.Workload": {
+        "properties": {
+          "created_at": {
+            "description": "CreatedAt is the timestamp when the workload was created.",
+            "type": "string"
+          },
+          "group": {
+            "description": "Group is the name of the group this workload belongs to, if any.",
+            "type": "string"
+          },
+          "labels": {
+            "additionalProperties": { "type": "string" },
+            "description": "Labels are the container labels (excluding standard ToolHive labels)",
+            "type": "object"
+          },
+          "name": {
+            "description": "Name is the name of the workload.\nIt is used as a unique identifier.",
+            "type": "string"
+          },
+          "package": {
+            "description": "Package specifies the Workload Package used to create this Workload.",
+            "type": "string"
+          },
+          "port": {
+            "description": "Port is the port on which the workload is exposed.\nThis is embedded in the URL.",
+            "type": "integer"
+          },
+          "status": { "$ref": "#/components/schemas/workloads.WorkloadStatus" },
+          "status_context": {
+            "description": "StatusContext provides additional context about the workload's status.\nThe exact meaning is determined by the status and the underlying runtime.",
+            "type": "string"
+          },
+          "tool_type": {
+            "description": "ToolType is the type of tool this workload represents.\nFor now, it will always be \"mcp\" - representing an MCP server.",
+            "type": "string"
+          },
+          "tools": {
+            "description": "ToolsFilter is the filter on tools applied to the workload.",
+            "items": { "type": "string" },
+            "type": "array",
+            "uniqueItems": false
+          },
+          "transport_type": {
+            "$ref": "#/components/schemas/types.TransportType"
+          },
+          "url": {
+            "description": "URL is the URL of the workload exposed by the ToolHive proxy.",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "workloads.WorkloadStatus": {
+        "description": "Status is the current status of the workload.",
+        "type": "string",
+        "x-enum-varnames": [
+          "WorkloadStatusRunning",
+          "WorkloadStatusStopped",
+          "WorkloadStatusError",
+          "WorkloadStatusStarting",
+          "WorkloadStatusStopping",
+          "WorkloadStatusUnhealthy",
+          "WorkloadStatusRemoving",
+          "WorkloadStatusUnknown"
+        ]
+>>>>>>> 14530c6 (build):renderer/src/common/api/openapi.json
       }
     }
   },
