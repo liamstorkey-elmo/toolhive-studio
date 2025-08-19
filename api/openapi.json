@@ -141,7 +141,7 @@
           "AmpCursor",
           "AmpVSCodeInsider",
           "AmpWindsurf",
-          "ClaudeDesktop"
+          "AmpWindsurf"
         ]
       },
       "client.MCPClientStatus": {
@@ -164,7 +164,7 @@
               "AmpCursor",
               "AmpVSCodeInsider",
               "AmpWindsurf",
-              "ClaudeDesktop"
+              "AmpWindsurf"
             ]
           },
           "installed": {
@@ -521,6 +521,7 @@
             "description": "Host is the host for the HTTP proxy",
             "type": "string"
           },
+          "ignore_config": { "$ref": "#/components/schemas/ignore.Config" },
           "image": {
             "description": "Image is the Docker image to run",
             "type": "string"
@@ -540,6 +541,12 @@
           "k8s_pod_template_patch": {
             "description": "K8sPodTemplatePatch is a JSON string to patch the Kubernetes pod template\nOnly applicable when using Kubernetes runtime",
             "type": "string"
+          },
+          "middleware_configs": {
+            "description": "MiddlewareConfigs contains the list of middleware to apply to the transport\nand the configuration for each middleware.",
+            "items": { "$ref": "#/components/schemas/types.MiddlewareConfig" },
+            "type": "array",
+            "uniqueItems": false
           },
           "name": {
             "description": "Name is the name of the MCP server",
@@ -606,6 +613,20 @@
         },
         "type": "object"
       },
+      "runtime.WorkloadStatus": {
+        "description": "Status is the current status of the workload.",
+        "type": "string",
+        "x-enum-varnames": [
+          "WorkloadStatusRunning",
+          "WorkloadStatusStopped",
+          "WorkloadStatusError",
+          "WorkloadStatusStarting",
+          "WorkloadStatusStopping",
+          "WorkloadStatusUnhealthy",
+          "WorkloadStatusRemoving",
+          "WorkloadStatusUnknown"
+        ]
+      },
       "secrets.SecretParameter": {
         "properties": {
           "name": { "type": "string" },
@@ -648,6 +669,19 @@
           },
           "serviceVersion": {
             "description": "ServiceVersion is the service version for telemetry",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "types.MiddlewareConfig": {
+        "properties": {
+          "parameters": {
+            "description": "Parameters is a JSON object containing the middleware parameters.\nIt is stored as a raw message to allow flexible parameter types.",
+            "type": "object"
+          },
+          "type": {
+            "description": "Type is a string representing the middleware type.",
             "type": "string"
           }
         },
@@ -725,11 +759,7 @@
                 "VSCodeInsider",
                 "VSCode",
                 "ClaudeCode",
-<<<<<<< HEAD
                 "ClaudeDesktop",
-=======
-<<<<<<< HEAD:api/openapi.json
->>>>>>> 8df9644 (build)
                 "Windsurf",
                 "WindsurfJetBrains",
                 "AmpCli",
@@ -737,9 +767,6 @@
                 "AmpCursor",
                 "AmpVSCodeInsider",
                 "AmpWindsurf"
-=======
-                "ClaudeDesktop"
->>>>>>> 14530c6 (build):renderer/src/common/api/openapi.json
               ]
             },
             "type": "array",
@@ -791,11 +818,7 @@
               "VSCodeInsider",
               "VSCode",
               "ClaudeCode",
-<<<<<<< HEAD
               "ClaudeDesktop",
-=======
-<<<<<<< HEAD:api/openapi.json
->>>>>>> 8df9644 (build)
               "Windsurf",
               "WindsurfJetBrains",
               "AmpCli",
@@ -803,9 +826,6 @@
               "AmpCursor",
               "AmpVSCodeInsider",
               "AmpWindsurf"
-=======
-              "ClaudeDesktop"
->>>>>>> 14530c6 (build):renderer/src/common/api/openapi.json
             ]
           }
         },
@@ -829,11 +849,7 @@
               "VSCodeInsider",
               "VSCode",
               "ClaudeCode",
-<<<<<<< HEAD
               "ClaudeDesktop",
-=======
-<<<<<<< HEAD:api/openapi.json
->>>>>>> 8df9644 (build)
               "Windsurf",
               "WindsurfJetBrains",
               "AmpCli",
@@ -841,9 +857,6 @@
               "AmpCursor",
               "AmpVSCodeInsider",
               "AmpWindsurf"
-=======
-              "ClaudeDesktop"
->>>>>>> 14530c6 (build):renderer/src/common/api/openapi.json
             ]
           }
         },
@@ -1207,8 +1220,6 @@
           }
         },
         "type": "object"
-<<<<<<< HEAD:api/openapi.json
-=======
       },
       "workloads.Workload": {
         "properties": {
@@ -1275,7 +1286,6 @@
           "WorkloadStatusRemoving",
           "WorkloadStatusUnknown"
         ]
->>>>>>> 14530c6 (build):renderer/src/common/api/openapi.json
       }
     }
   },
