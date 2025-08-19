@@ -1,7 +1,7 @@
-import type { WorkloadsWorkload } from '@/common/api/generated'
+import type { CoreWorkload } from '@api/types.gen'
 import z from 'zod/v4'
 
-const getCommonFields = (workloads: WorkloadsWorkload[]) =>
+const getCommonFields = (workloads: CoreWorkload[]) =>
   z.object({
     name: z
       .union([z.string(), z.undefined()])
@@ -41,27 +41,44 @@ const getCommonFields = (workloads: WorkloadsWorkload[]) =>
       })
       .array(),
     networkIsolation: z.boolean(),
-    allowedHosts: z
-      .string()
-      .refine((val) => /^\.?([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}$/.test(val), {
-        message: 'Invalid host format',
+    allowedHosts: z.array(
+      z.object({
+        value: z.string().refine(
+          (val) => {
+            if (val.trim() === '') return true
+            return /^\.?([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}$/.test(val)
+          },
+          {
+            message: 'Invalid host format',
+          }
+        ),
       })
-      .array(),
-    allowedPorts: z
-      .string()
-      .refine(
-        (val) => {
-          const num = parseInt(val, 10)
-          return !isNaN(num) && num >= 1 && num <= 65535
-        },
-        {
-          message: 'Port must be a number between 1 and 65535',
-        }
+    ),
+    allowedPorts: z.array(
+      z.object({
+        value: z.string().refine(
+          (val) => {
+            const num = parseInt(val, 10)
+            return !isNaN(num) && num >= 1 && num <= 65535
+          },
+          {
+            message: 'Port must be a number between 1 and 65535',
+          }
+        ),
+      })
+    ),
+    volumes: z
+      .array(
+        z.object({
+          host: z.string(),
+          container: z.string(),
+          accessMode: z.enum(['ro', 'rw']).optional(),
+        })
       )
-      .array(),
+      .optional(),
   })
 
-export const getFormSchemaRunMcpCommand = (workloads: WorkloadsWorkload[]) =>
+export const getFormSchemaRunMcpCommand = (workloads: CoreWorkload[]) =>
   z.discriminatedUnion('type', [
     z.object({
       type: z.literal('docker_image'),

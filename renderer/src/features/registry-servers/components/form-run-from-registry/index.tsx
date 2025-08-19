@@ -11,14 +11,14 @@ import {
   DialogTitle,
 } from '@/common/components/ui/dialog'
 import { Button } from '@/common/components/ui/button'
-import type { RegistryImageMetadata } from '@/common/api/generated/types.gen'
+import type { RegistryImageMetadata } from '@api/types.gen'
 import { zodV4Resolver } from '@/common/lib/zod-v4-resolver'
 import { groupEnvVars } from '../../lib/group-env-vars'
 import {
   getFormSchemaRunFromRegistry,
   type FormSchemaRunFromRegistry,
 } from '../../lib/get-form-schema-run-from-registry'
-import { getApiV1BetaWorkloadsOptions } from '@/common/api/generated/@tanstack/react-query.gen'
+import { getApiV1BetaWorkloadsOptions } from '@api/@tanstack/react-query.gen'
 import { useRunFromRegistry } from '../../hooks/use-run-from-registry'
 import { LoadingStateAlert } from '../../../../common/components/secrets/loading-state-alert'
 import { NetworkIsolationTabContent } from '../../../network-isolation/components/network-isolation-tab-content'
@@ -41,6 +41,7 @@ const FIELD_TAB_MAP = {
   allowedHosts: 'network-isolation',
   allowedPorts: 'network-isolation',
   networkIsolation: 'network-isolation',
+  volumes: 'configuration',
 } as const satisfies FieldTabMapping<Tab, Field>
 
 interface FormRunFromRegistryProps {
@@ -109,6 +110,7 @@ export function FormRunFromRegistry({
     defaultValues: {
       serverName: server?.name || '',
       cmd_arguments,
+      volumes: [{ host: '', container: '', accessMode: 'rw' }],
       secrets: groupedEnvVars.secrets.map((s) => ({
         name: s.name || '',
         value: { secret: s.default || '', isFromStore: false },
@@ -118,11 +120,16 @@ export function FormRunFromRegistry({
         value: e.default || '',
       })),
       networkIsolation: false,
-      allowedPorts:
-        server?.permissions?.network?.outbound?.allow_port?.map((port) =>
-          port.toString()
-        ) || [],
-      allowedHosts: server?.permissions?.network?.outbound?.allow_host || [],
+      allowedHosts: server?.permissions?.network?.outbound?.allow_host
+        ? server.permissions.network.outbound.allow_host.map((host) => ({
+            value: host,
+          }))
+        : [],
+      allowedPorts: server?.permissions?.network?.outbound?.allow_port
+        ? server.permissions.network.outbound.allow_port.map((port) => ({
+            value: port.toString(),
+          }))
+        : [],
     },
     reValidateMode: 'onChange',
     mode: 'onChange',

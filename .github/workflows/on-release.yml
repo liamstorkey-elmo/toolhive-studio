@@ -40,7 +40,7 @@ jobs:
       NODE_OPTIONS: '--max_old_space_size=4096'
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4
 
       - name: Setup
         uses: ./.github/actions/setup
@@ -71,6 +71,16 @@ jobs:
 
           apple-issuer-id: ${{ secrets.APPLE_ISSUER_ID }}
           apple-key-id: ${{ secrets.APPLE_KEY_ID }}
+
+      - name: Setup Windows code signing
+        uses: ./.github/actions/setup-windows-codesign
+        if: runner.os == 'Windows'
+        with:
+          sm-host: ${{ secrets.SM_HOST }}
+          sm-api-key: ${{ secrets.SM_API_KEY }}
+          sm-client-cert-file-b64: ${{ secrets.SM_CLIENT_CERT_FILE_B64 }}
+          sm-client-cert-password: ${{ secrets.SM_CLIENT_CERT_PASSWORD }}
+          sm-code-signing-cert-sha1-hash: ${{ secrets.SM_CODE_SIGNING_CERT_SHA1_HASH }}
 
       - name: Install Flatpak tool-chain (Linux only)
         if: runner.os == 'Linux'

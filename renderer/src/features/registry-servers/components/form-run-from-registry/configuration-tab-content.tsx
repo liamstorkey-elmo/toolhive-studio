@@ -12,11 +12,12 @@ import { AlertErrorFormSubmission } from '../../../../common/components/workload
 import type { UseFormReturn } from 'react-hook-form'
 import type { FormSchemaRunFromRegistry } from '../../lib/get-form-schema-run-from-registry'
 import type { GroupedEnvVars } from '../../lib/group-env-vars'
-import type { RegistryEnvVar } from '@/common/api/generated/types.gen'
+import type { RegistryEnvVar } from '@api/types.gen'
 import { cn } from '@/common/lib/utils'
 import { FormComboboxSecretStore } from '@/common/components/secrets/form-combobox-secrets-store'
 import { TooltipInfoIcon } from '@/common/components/ui/tooltip-info-icon'
 import { CommandArgumentsField } from '@/common/components/workload-cmd-arg/command-arguments-field'
+import { FormFieldsArrayVolumes } from '@/features/mcp-servers/components/form-fields-array-custom-volumes'
 
 interface ConfigurationTabContentProps {
   error: string | null
@@ -205,9 +206,10 @@ export function ConfigurationTabContent({
       <CommandArgumentsField<FormSchemaRunFromRegistry>
         getValues={(name) => form.getValues(name)}
         setValue={(name, value) => form.setValue(name, value)}
-        cmd_arguments={form.getValues('cmd_arguments')}
         control={form.control}
       />
+
+      <FormFieldsArrayVolumes<FormSchemaRunFromRegistry> form={form} />
 
       {groupedEnvVars.secrets[0] ? (
         <section className="mb-10">

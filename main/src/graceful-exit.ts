@@ -1,12 +1,13 @@
 import {
   getApiV1BetaWorkloads,
   postApiV1BetaWorkloadsByNameStop,
-} from '../../renderer/src/common/api/generated/sdk.gen'
-import { createClient } from '../../renderer/src/common/api/generated/client'
-import type { WorkloadsWorkload } from '../../renderer/src/common/api/generated/types.gen'
+} from '@api/sdk.gen'
+import { createClient } from '@api/client'
+import type { CoreWorkload } from '@api/types.gen'
 import Store from 'electron-store'
 import log from './logger'
 import { delay } from '../../utils/delay'
+import { getHeaders } from './headers'
 
 // Create a store instance for tracking shutdown servers
 const shutdownStore = new Store({
@@ -17,8 +18,11 @@ const shutdownStore = new Store({
 })
 
 /** Get the currently running servers from the ToolHive API. */
-async function getRunningServers(port: number): Promise<WorkloadsWorkload[]> {
-  const client = createClient({ baseUrl: `http://localhost:${port}` })
+async function getRunningServers(port: number): Promise<CoreWorkload[]> {
+  const client = createClient({
+    baseUrl: `http://localhost:${port}`,
+    headers: getHeaders(),
+  })
   try {
     const response = await getApiV1BetaWorkloads({ client })
     if (!response?.data?.workloads) {
@@ -26,7 +30,7 @@ async function getRunningServers(port: number): Promise<WorkloadsWorkload[]> {
       return []
     }
     return response.data.workloads.filter(
-      (server: WorkloadsWorkload) => server.status === 'running' && server.name
+      (server: CoreWorkload) => server.status === 'running' && server.name
     )
   } catch (error) {
     log.error('Failed to get running servers: ', error)
@@ -63,7 +67,10 @@ export async function stopAllServers(
   _binPath: string, // Kept for backward compatibility
   port: number
 ): Promise<void> {
-  const client = createClient({ baseUrl: `http://localhost:${port}` })
+  const client = createClient({
+    baseUrl: `http://localhost:${port}`,
+    headers: getHeaders(),
+  })
   const servers = await getRunningServers(port)
   log.info(
     `Found ${servers.length} running servers: `,

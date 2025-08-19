@@ -1,7 +1,4 @@
-import type {
-  RegistryEnvVar,
-  WorkloadsWorkload,
-} from '@/common/api/generated/types.gen'
+import type { RegistryEnvVar, CoreWorkload } from '@api/types.gen'
 import z from 'zod/v4'
 import type { GroupedEnvVars } from './group-env-vars'
 import { isEmptyEnvVar } from '@/common/lib/utils'
@@ -47,7 +44,26 @@ export function getFormSchemaRunFromRegistry({
   envVars,
   secrets,
   workloads,
-}: GroupedEnvVars & { workloads: WorkloadsWorkload[] }) {
+}: GroupedEnvVars & { workloads: CoreWorkload[] }) {
+  const isNonEmptyString = (v: unknown): v is string =>
+    typeof v === 'string' && v.length > 0
+
+  const secretNames = Array.from(
+    new Set(secrets.map(({ name }) => name).filter(isNonEmptyString))
+  )
+  const secretNameSchema =
+    secretNames.length === 0
+      ? z.string()
+      : z.union(secretNames.map((v) => z.literal(v)))
+
+  const envVarNames = Array.from(
+    new Set(envVars.map(({ name }) => name).filter(isNonEmptyString))
+  )
+  const envVarNameSchema =
+    envVarNames.length === 0
+      ? z.string()
+      : z.union(envVarNames.map((v) => z.literal(v)))
+
   return z.object({
     serverName: z
       .string()
@@ -59,7 +75,7 @@ export function getFormSchemaRunFromRegistry({
     cmd_arguments: z.array(z.string()).optional(),
     secrets: z
       .object({
-        name: z.union(secrets.map(({ name }) => z.literal(name ?? ''))),
+        name: secretNameSchema,
 
         value: z.object({
           secret: z.string().optional(), // NOTE: This is optional to allow us to pre-populate the form with empty strings, we refine based on whether it is required by the server later.
@@ -73,7 +89,7 @@ export function getFormSchemaRunFromRegistry({
       .array(),
     envVars: z
       .object({
-        name: z.union(envVars.map(({ name }) => z.literal(name ?? ''))),
+        name: envVarNameSchema,
         value: z.string().optional(),
       })
       .refine((d) => refineEnvVar(d, envVars), {
@@ -82,25 +98,41 @@ export function getFormSchemaRunFromRegistry({
       })
       .array(),
     networkIsolation: z.boolean(),
-    allowedHosts: z
-      .string()
-      .refine((val) => /^\.?([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}$/.test(val), {
-        message: 'Invalid host format',
+    allowedHosts: z.array(
+      z.object({
+        value: z.string().refine(
+          (val) => {
+            if (val.trim() === '') return true
+            return /^\.?([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}$/.test(val)
+          },
+          {
+            message: 'Invalid host format',
+          }
+        ),
       })
-      .array(),
-    allowedPorts: z
-      .string()
-
-      .refine(
-        (val) => {
-          const num = parseInt(val, 10)
-          return !isNaN(num) && num >= 1 && num <= 65535
-        },
-        {
-          message: 'Port must be a number between 1 and 65535',
-        }
+    ),
+    allowedPorts: z.array(
+      z.object({
+        value: z.string().refine(
+          (val) => {
+            const num = parseInt(val, 10)
+            return !isNaN(num) && num >= 1 && num <= 65535
+          },
+          {
+            message: 'Port must be a number between 1 and 65535',
+          }
+        ),
+      })
+    ),
+    volumes: z
+      .array(
+        z.object({
+          host: z.string(),
+          container: z.string(),
+          accessMode: z.enum(['ro', 'rw']).optional(),
+        })
       )
-      .array(),
+      .optional(),
   })
 }
 

@@ -1,13 +1,10 @@
-import type {
-  V1WorkloadListResponse,
-  WorkloadsWorkload,
-} from '@/common/api/generated'
+import type { V1WorkloadListResponse, CoreWorkload } from '@api/types.gen'
 import {
   postApiV1BetaWorkloadsByNameRestartMutation,
   getApiV1BetaWorkloadsQueryKey,
   getApiV1BetaWorkloadsByNameOptions,
   postApiV1BetaWorkloadsRestartMutation,
-} from '@/common/api/generated/@tanstack/react-query.gen'
+} from '@api/@tanstack/react-query.gen'
 import { useToastMutation } from '@/common/hooks/use-toast-mutation'
 import { pollBatchServerStatus } from '@/common/lib/polling'
 import { useQueryClient } from '@tanstack/react-query'
@@ -72,7 +69,7 @@ export function useMutationRestartServerAtStartup() {
 
           const updatedData = {
             ...oldData,
-            workloads: workloads?.map((server: WorkloadsWorkload) =>
+            workloads: workloads?.map((server: CoreWorkload) =>
               serverNames.includes(server.name || '')
                 ? { ...server, status: 'restarting' }
                 : server
@@ -136,7 +133,7 @@ export function useMutationRestartServer({ name }: { name: string }) {
 
           const updatedData = {
             ...oldData,
-            workloads: oldData.workloads?.map((server: WorkloadsWorkload) =>
+            workloads: oldData.workloads?.map((server: CoreWorkload) =>
               server.name === name ? { ...server, status: 'running' } : server
             ),
           }

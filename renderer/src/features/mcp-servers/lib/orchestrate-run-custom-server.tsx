@@ -1,15 +1,15 @@
 import { type UseMutateAsyncFunction } from '@tanstack/react-query'
 import {
-  type Options,
   type PermissionsOutboundNetworkPermissions,
   type PostApiV1BetaSecretsDefaultKeysData,
   type SecretsSecretParameter,
   type V1CreateRequest,
   type V1CreateSecretResponse,
-} from '@/common/api/generated'
+} from '@api/types.gen'
+import type { Options } from '@api/client'
 import type { FormSchemaRunMcpCommand } from './form-schema-run-mcp-server-with-command'
 import type { DefinedSecret, PreparedSecret } from '@/common/types/secrets'
-import { isEmptyEnvVar } from '@/common/lib/utils'
+import { getVolumes, isEmptyEnvVar } from '@/common/lib/utils'
 
 type SaveSecretFn = UseMutateAsyncFunction<
   V1CreateSecretResponse,
@@ -139,18 +139,21 @@ export function prepareCreateWorkloadData(
     ? {
         network: {
           outbound: {
-            allow_host: allowedHosts,
-            allow_port: allowedPorts.map((port) => parseInt(port, 10)),
+            allow_host: allowedHosts.map((host) => host.value),
+            allow_port: allowedPorts.map((port) => parseInt(port.value, 10)),
             insecure_allow_all: false,
           } as PermissionsOutboundNetworkPermissions,
         },
       }
     : undefined
 
+  const volumes = getVolumes(data.volumes ?? [])
+
   return {
     ...request,
     network_isolation: networkIsolation,
     permission_profile,
+    volumes,
   }
 }
 

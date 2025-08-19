@@ -15,6 +15,7 @@ import { existsSync, readFile } from 'node:fs'
 import started from 'electron-squirrel-startup'
 import * as Sentry from '@sentry/electron/main'
 import { initTray, updateTrayStatus } from './system-tray'
+import { showInDock, hideWindow } from './dock-utils'
 import { setAutoLaunch, getAutoLaunchStatus } from './auto-launch'
 import { createApplicationMenu } from './menu'
 import { getCspString } from './csp'
@@ -36,6 +37,40 @@ import log from './logger'
 import { getAppVersion, isOfficialReleaseBuild, pollWindowReady } from './util'
 import { delay } from '../../utils/delay'
 import Store from 'electron-store'
+import { getHeaders } from './headers'
+import {
+  getFeatureFlag,
+  enableFeatureFlag,
+  disableFeatureFlag,
+  getAllFeatureFlags,
+  type FeatureFlagKey,
+} from './feature-flags'
+import {
+  CHAT_PROVIDER_INFO,
+  getChatSettings,
+  saveChatSettings,
+  clearChatSettings,
+  getSelectedModel,
+  saveSelectedModel,
+  getMcpServerTools,
+  getEnabledMcpTools,
+  getEnabledMcpServersFromTools,
+  saveEnabledMcpTools,
+  discoverToolSupportedModels,
+  fetchOpenRouterModels,
+  type ChatRequest,
+} from './chat'
+
+let tray: Tray | null = null
+let isQuitting = false
+let tearingDown = false
+let pendingUpdateVersion: string | null = null
+let updateState:
+  | 'checking'
+  | 'downloading'
+  | 'downloaded'
+  | 'installing'
+  | 'none' = 'none'
 
 const store = new Store<{
   isTelemetryEnabled: boolean
@@ -70,9 +105,13 @@ app.on('ready', () => {
   }, 2000)
 })
 
+// ────────────────────────────────────────────────────────────────────────────
+//  Auto-updater event handlers
+// ────────────────────────────────────────────────────────────────────────────
 autoUpdater.on('update-downloaded', (_, __, releaseName) => {
-  log.info('🔄 Update downloaded - showing dialog')
-
+  log.info('[update] downloaded - showing dialog')
+  pendingUpdateVersion = releaseName
+  updateState = 'downloaded'
   if (!mainWindow) {
     log.error('MainWindow not available for update dialog')
     return
@@ -103,9 +142,12 @@ autoUpdater.on('update-downloaded', (_, __, releaseName) => {
     .showMessageBox(mainWindow, dialogOpts)
     .then(async (returnValue) => {
       if (returnValue.response === 0) {
-        isUpdateInProgress = true
+        log.info(
+          `[update] installing update to version: ${releaseName || 'unknown'}`
+        )
+        updateState = 'installing'
 
-        log.info('🛑 Removing quit listeners to avoid interference')
+        log.info('[update] removing quit listeners to avoid interference')
         app.removeAllListeners('before-quit')
         app.removeAllListeners('will-quit')
 
@@ -113,10 +155,9 @@ autoUpdater.on('update-downloaded', (_, __, releaseName) => {
         tearingDown = true
 
         try {
-          log.info('🛑 Starting graceful shutdown before update...')
-          mainWindow?.webContents.send('graceful-exit')
+          log.info('[update] starting graceful shutdown before update...')
 
-          await delay(500)
+          mainWindow?.webContents.send('graceful-exit')
 
           const port = getToolhivePort()
           if (port) {
@@ -127,19 +168,21 @@ autoUpdater.on('update-downloaded', (_, __, releaseName) => {
 
           tray?.destroy()
 
-          log.info('🚀 All cleaned up, calling autoUpdater.quitAndInstall()...')
+          log.info(
+            '[update] all cleaned up, calling autoUpdater.quitAndInstall()...'
+          )
           autoUpdater.quitAndInstall()
         } catch (error) {
-          isUpdateInProgress = false
-          log.error('❌ Error during graceful shutdown:', error)
+          updateState = 'none'
+          log.error('[update] error during graceful shutdown:', error)
           tray?.destroy()
           app.relaunch()
           app.quit()
         }
       } else {
-        isUpdateInProgress = false
+        updateState = 'none'
         log.info(
-          'User deferred update installation - showing toast notification'
+          '[update] user deferred update installation - showing toast notification'
         )
         if (mainWindow) {
           mainWindow.webContents.send('update-downloaded')
@@ -147,20 +190,33 @@ autoUpdater.on('update-downloaded', (_, __, releaseName) => {
       }
     })
     .catch((error) => {
-      log.error('❌ Error showing dialog:', error)
+      log.error('[update] error showing dialog:', error)
     })
 })
 
-autoUpdater.on('error', (message) => {
-  log.error('There was a problem updating the application: ', message)
+autoUpdater.on('checking-for-update', () => {
+  log.info('[update] checking for updates...')
+  updateState = 'checking'
 })
 
-autoUpdater.checkForUpdates()
+autoUpdater.on('update-available', () => {
+  updateState = 'downloading'
+})
 
-let tray: Tray | null = null
-let isQuitting = false
-let isUpdateInProgress = false
-let tearingDown = false
+autoUpdater.on('update-not-available', () => {
+  if (updateState === 'downloading') {
+    log.warn('[update] update became unavailable during download - ignoring')
+    return
+  }
+  updateState = 'none'
+})
+
+autoUpdater.on('error', (message) => {
+  log.error('[update] there was a problem updating the application: ', message)
+  log.info('[update] update state: ', updateState)
+  log.info('[update] toolhive binary is running: ', isToolhiveRunning())
+  updateState = 'none'
+})
 
 /** Hold the quit, run teardown, then really exit. */
 export async function blockQuit(source: string, event?: Electron.Event) {
@@ -285,12 +341,15 @@ function createWindow() {
 
   // Minimize-to-tray instead of close
   mainWindow.on('minimize', () => {
-    if (shouldStartHidden || tray) mainWindow.hide()
+    if (shouldStartHidden || tray) {
+      hideWindow(mainWindow)
+    }
   })
+
   mainWindow.on('close', (event) => {
     if (!isQuitting && tray) {
       event.preventDefault()
-      mainWindow.hide()
+      hideWindow(mainWindow)
     }
   })
 
@@ -322,7 +381,7 @@ function createWindow() {
 let mainWindow: BrowserWindow | null = null
 
 app.whenReady().then(async () => {
-  isUpdateInProgress = false
+  updateState = 'none'
   // Initialize tray first
   try {
     tray = initTray({ toolHiveIsRunning: false }) // Start with false, will update after ToolHive starts
@@ -332,12 +391,36 @@ app.whenReady().then(async () => {
   } catch (error) {
     log.error('Failed to initialize system tray: ', error)
   }
-
   // Start ToolHive with tray reference
   await startToolhive(tray || undefined)
 
   // Create main window
   mainWindow = createWindow()
+
+  mainWindow.webContents.once('did-finish-load', () => {
+    if (!mainWindow) return
+
+    if (updateState === 'none') {
+      autoUpdater.checkForUpdates()
+    }
+
+    mainWindow.webContents.on('before-input-event', (event, input) => {
+      const isCmdQ =
+        process.platform === 'darwin' &&
+        input.meta &&
+        input.key.toLowerCase() === 'q'
+      const isCtrlQ =
+        process.platform !== 'darwin' &&
+        input.control &&
+        input.key.toLowerCase() === 'q'
+
+      if (isCmdQ || isCtrlQ) {
+        event.preventDefault()
+        log.info('CmdOrCtrl+Q pressed, hiding window')
+        hideWindow(mainWindow!)
+      }
+    })
+  })
 
   // Setup CSP headers
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
@@ -380,12 +463,13 @@ app.on('activate', () => {
   if (BrowserWindow.getAllWindows().length === 0) {
     mainWindow = createWindow()
   } else {
+    showInDock()
     mainWindow?.show()
   }
 })
 
 app.on('will-finish-launching', () => {
-  log.info('App will finish launching - preparing for potential restart')
+  log.info('App will finish launching')
 })
 
 app.on('before-quit', (e) => {
@@ -458,12 +542,15 @@ ipcMain.handle('set-auto-launch', (_event, enabled: boolean) => {
 })
 
 ipcMain.handle('show-app', () => {
+  showInDock()
   mainWindow?.show()
   mainWindow?.focus()
 })
 
 ipcMain.handle('hide-app', () => {
-  mainWindow?.hide()
+  if (mainWindow) {
+    hideWindow(mainWindow)
+  }
 })
 
 ipcMain.handle('quit-app', (e) => {
@@ -512,23 +599,30 @@ ipcMain.handle('restart-toolhive', async () => {
 })
 
 ipcMain.handle('install-update-and-restart', async () => {
-  log.info('Installing update and restarting application')
+  log.info(
+    `[update] installing update and restarting application ${pendingUpdateVersion || 'unknown'}`
+  )
   // Set a flag to indicate we're installing an update
   // This will prevent the graceful shutdown process
   isQuitting = true
   tearingDown = true
-  isUpdateInProgress = true
+  updateState = 'installing'
 
-  // Stop ToolHive and servers immediately without graceful shutdown
+  app.removeAllListeners('before-quit')
+  app.removeAllListeners('will-quit')
+
+  log.info('[update] starting graceful shutdown before update...')
+  mainWindow?.webContents.send('graceful-exit')
+
   try {
     const port = getToolhivePort()
     if (port) {
       await stopAllServers(binPath, port).catch((err) => {
-        log.error('Failed to stop servers during update: ', err)
+        log.error('[update] failed to stop servers during update: ', err)
       })
     }
   } catch (err) {
-    log.error('Failed to get port during update: ', err)
+    log.error('[update] failed to get port during update: ', err)
   }
 
   // Stop ToolHive
@@ -538,16 +632,21 @@ ipcMain.handle('install-update-and-restart', async () => {
   tray?.destroy()
 
   // Install update and restart
+  log.info('[update] all cleaned up, calling autoUpdater.quitAndInstall()...')
   autoUpdater.quitAndInstall()
   return { success: true }
 })
 
 ipcMain.handle('is-update-in-progress', () => {
-  log.debug(`[is-update-in-progress]: ${isUpdateInProgress}`)
-  return isUpdateInProgress
+  log.debug(`[is-update-in-progress]: ${updateState}`)
+  return updateState === 'installing'
 })
 
-ipcMain.handle('is-release-build', () => {
+ipcMain.handle('telemetry-headers', () => {
+  return getHeaders()
+})
+
+ipcMain.handle('is-official-release-build', () => {
   return isOfficialReleaseBuild()
 })
 
@@ -607,4 +706,129 @@ ipcMain.handle(
       return
     }
   }
+)
+
+// File/folder pickers for renderer
+ipcMain.handle('dialog:select-file', async () => {
+  if (!mainWindow) return null
+  const result = await dialog.showOpenDialog(mainWindow, {
+    properties: ['openFile'],
+  })
+  if (result.canceled || result.filePaths.length === 0) return null
+  return result.filePaths[0]
+})
+
+ipcMain.handle('dialog:select-folder', async () => {
+  if (!mainWindow) return null
+  const result = await dialog.showOpenDialog(mainWindow, {
+    properties: ['openDirectory'],
+  })
+  if (result.canceled || result.filePaths.length === 0) return null
+  return result.filePaths[0]
+})
+
+// Feature flag IPC handlers
+ipcMain.handle('feature-flags:get', (_event, key: FeatureFlagKey): boolean => {
+  return getFeatureFlag(key)
+})
+
+ipcMain.handle('feature-flags:enable', (_event, key: FeatureFlagKey): void => {
+  enableFeatureFlag(key)
+})
+
+ipcMain.handle('feature-flags:disable', (_event, key: FeatureFlagKey): void => {
+  disableFeatureFlag(key)
+})
+
+ipcMain.handle('feature-flags:get-all', (): Record<FeatureFlagKey, boolean> => {
+  return getAllFeatureFlags()
+})
+
+// ────────────────────────────────────────────────────────────────────────────
+//  Chat IPC handlers
+// ────────────────────────────────────────────────────────────────────────────
+
+ipcMain.handle('chat:get-providers', async () => {
+  // Create a copy of the provider info to avoid modifying the original
+  const providers = [...CHAT_PROVIDER_INFO]
+
+  // For OpenRouter, fetch the latest models dynamically only if API key is available
+  const openRouterIndex = providers.findIndex((p) => p.id === 'openrouter')
+  if (openRouterIndex !== -1) {
+    try {
+      const openRouterSettings = getChatSettings('openrouter')
+
+      // Only fetch models if user has provided an API key
+      if (
+        openRouterSettings.apiKey &&
+        openRouterSettings.apiKey.trim() !== ''
+      ) {
+        const openRouterModels = await fetchOpenRouterModels()
+        const originalProvider = providers[openRouterIndex]
+        if (originalProvider) {
+          providers[openRouterIndex] = {
+            id: originalProvider.id,
+            name: originalProvider.name,
+            models: openRouterModels,
+          }
+        }
+      }
+      // If no API key, keep the original hardcoded models as fallback
+    } catch (error) {
+      log.error('Failed to fetch OpenRouter models, using fallback:', error)
+      // Keep the original hardcoded models as fallback
+    }
+  }
+
+  return providers
+})
+
+// Chat streaming endpoint - uses real-time IPC events
+ipcMain.handle('chat:stream', async (event, request: ChatRequest) => {
+  const streamId = `stream-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
+  const { handleChatStreamRealtime } = await import('./chat')
+
+  // Start streaming (non-blocking)
+  handleChatStreamRealtime(request, streamId, event.sender)
+
+  // Return the stream ID immediately
+  return { streamId }
+})
+
+// Chat settings store handlers
+ipcMain.handle('chat:get-settings', (_, providerId: string) =>
+  getChatSettings(providerId)
+)
+ipcMain.handle(
+  'chat:save-settings',
+  (
+    _,
+    providerId: string,
+    settings: { apiKey: string; enabledTools: string[] }
+  ) => saveChatSettings(providerId, settings)
+)
+ipcMain.handle('chat:clear-settings', (_, providerId?: string) =>
+  clearChatSettings(providerId)
+)
+ipcMain.handle('chat:discover-models', () => discoverToolSupportedModels())
+
+// Model selection persistence handlers
+ipcMain.handle('chat:get-selected-model', () => getSelectedModel())
+ipcMain.handle(
+  'chat:save-selected-model',
+  (_, provider: string, model: string) => saveSelectedModel(provider, model)
+)
+
+// MCP tools management handlers (single source of truth)
+ipcMain.handle('chat:get-mcp-server-tools', (_, serverName?: string) =>
+  getMcpServerTools(serverName)
+)
+ipcMain.handle('chat:get-enabled-mcp-tools', () => getEnabledMcpTools())
+ipcMain.handle('chat:get-enabled-mcp-servers-from-tools', () =>
+  getEnabledMcpServersFromTools()
+)
+ipcMain.handle(
+  'chat:save-enabled-mcp-tools',
+  (_, serverName: string, enabledTools: string[]) =>
+    saveEnabledMcpTools(serverName, enabledTools)
 )

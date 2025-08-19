@@ -8,7 +8,7 @@ import {
   type FormSchemaRunMcpCommand,
 } from '../lib/form-schema-run-mcp-server-with-command'
 import { FormFieldsRunMcpCommand } from './form-fields-run-mcp-command'
-import { getApiV1BetaWorkloadsOptions } from '@/common/api/generated/@tanstack/react-query.gen'
+import { getApiV1BetaWorkloadsOptions } from '@api/@tanstack/react-query.gen'
 import {
   Dialog,
   DialogContent,
@@ -29,13 +29,13 @@ import {
   useFormTabState,
   type FieldTabMapping,
 } from '@/common/hooks/use-form-tab-state'
+import { NetworkIsolationTabContent } from './network-isolation-tab-content'
+import { FormFieldsArrayVolumes } from './form-fields-array-custom-volumes'
 
 type Tab = 'configuration' | 'network-isolation'
 type CommonFields = keyof FormSchemaRunMcpCommand
 type VariantSpecificFields = 'image' | 'protocol' | 'package_name'
 type Field = CommonFields | VariantSpecificFields
-
-import { NetworkIsolationTabContent } from './network-isolation-tab-content'
 
 const FIELD_TAB_MAP = {
   name: 'configuration',
@@ -51,6 +51,7 @@ const FIELD_TAB_MAP = {
   allowedHosts: 'network-isolation',
   allowedPorts: 'network-isolation',
   networkIsolation: 'network-isolation',
+  volumes: 'configuration',
 } satisfies FieldTabMapping<Tab, Field>
 
 export function DialogFormRunMcpServerWithCommand({
@@ -106,6 +107,7 @@ export function DialogFormRunMcpServerWithCommand({
       networkIsolation: false,
       allowedHosts: [],
       allowedPorts: [],
+      volumes: [{ host: '', container: '', accessMode: 'rw' }],
     },
     reValidateMode: 'onChange',
     mode: 'onChange',
@@ -198,6 +200,9 @@ export function DialogFormRunMcpServerWithCommand({
                     <FormFieldsRunMcpCommand form={form} />
                     <FormFieldsArrayCustomSecrets form={form} />
                     <FormFieldsArrayCustomEnvVars form={form} />
+                    <FormFieldsArrayVolumes<FormSchemaRunMcpCommand>
+                      form={form}
+                    />
                   </div>
                 )}
                 {activeTab === 'network-isolation' && (

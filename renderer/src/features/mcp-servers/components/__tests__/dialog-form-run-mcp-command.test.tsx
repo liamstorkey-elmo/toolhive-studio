@@ -372,6 +372,28 @@ describe('DialogFormRunMcpServerWithCommand', () => {
     })
   })
 
+  it('renders aria-hidden column labels for storage volumes', async () => {
+    renderWithProviders(
+      <Wrapper>
+        <DialogFormRunMcpServerWithCommand isOpen onOpenChange={vi.fn()} />
+      </Wrapper>
+    )
+
+    await waitFor(() => {
+      expect(screen.getByRole('dialog')).toBeVisible()
+    })
+
+    expect(screen.getByText('Storage volumes')).toBeInTheDocument()
+
+    const hostLabel = screen.getByText('Host path')
+    const containerLabel = screen.getByText('Container path')
+
+    expect(hostLabel).toBeVisible()
+    expect(containerLabel).toBeVisible()
+    expect(hostLabel).toHaveAttribute('aria-hidden', 'true')
+    expect(containerLabel).toHaveAttribute('aria-hidden', 'true')
+  })
+
   it('closes dialog on successful submission', async () => {
     const mockInstallServerMutation = vi.fn()
     const mockCheckServerStatus = vi.fn()
@@ -510,8 +532,8 @@ describe('DialogFormRunMcpServerWithCommand', () => {
         transport: 'stdio',
         image: 'ghcr.io/test/server',
         networkIsolation: true,
-        allowedHosts: ['example.com'],
-        allowedPorts: ['8080'],
+        allowedHosts: [{ value: 'example.com' }],
+        allowedPorts: [{ value: '8080' }],
       })
     })
 

@@ -1,6 +1,5 @@
-import type { RegistryImageMetadata } from '@/common/api/generated/types.gen'
+import type { RegistryImageMetadata } from '@api/types.gen'
 import { CardRegistryServer } from './card-registry-server'
-import { useMemo } from 'react'
 import { useFilterSort } from '@/common/hooks/use-filter-sort'
 import { InputSearch } from '@/common/components/ui/input-search'
 import { useNavigate } from '@tanstack/react-router'
@@ -11,17 +10,13 @@ export function GridCardsRegistryServer({
   servers: RegistryImageMetadata[]
 }) {
   const navigate = useNavigate()
-  // Filter out filesystem servers
-  const filteredServers = useMemo(() => {
-    return servers.filter((server) => server.name !== 'filesystem')
-  }, [servers])
 
   const {
     filter,
     setFilter,
     filteredData: filteredAndSortedServers,
   } = useFilterSort({
-    data: filteredServers,
+    data: servers,
     filterFields: (server) => [server.name || '', server.description || ''],
     sortBy: (server) => server.name || '',
   })

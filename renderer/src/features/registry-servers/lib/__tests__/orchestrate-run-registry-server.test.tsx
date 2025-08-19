@@ -1,6 +1,6 @@
 import { it, expect, vi, describe } from 'vitest'
 import type { FormSchemaRunFromRegistry } from '../get-form-schema-run-from-registry'
-import type { RegistryImageMetadata } from '@/common/api/generated'
+import type { RegistryImageMetadata } from '@api/types.gen'
 import {
   getDefinedSecrets,
   saveSecrets,
@@ -188,6 +188,7 @@ describe('prepareCreateWorkloadData', () => {
       networkIsolation: false,
       allowedHosts: [],
       allowedPorts: [],
+      volumes: [],
     }
 
     const secrets = [
@@ -208,6 +209,7 @@ describe('prepareCreateWorkloadData', () => {
       cmd_arguments: ['--debug', '--port', '8080'],
       target_port: 8080,
       network_isolation: false,
+      volumes: [],
     })
   })
 
@@ -219,6 +221,7 @@ describe('prepareCreateWorkloadData', () => {
       networkIsolation: false,
       allowedHosts: [],
       allowedPorts: [],
+      volumes: [],
     }
 
     const result = prepareCreateWorkloadData(SERVER, data)
@@ -232,6 +235,7 @@ describe('prepareCreateWorkloadData', () => {
       cmd_arguments: [],
       target_port: 8080,
       network_isolation: false,
+      volumes: [],
     })
   })
 
@@ -244,6 +248,7 @@ describe('prepareCreateWorkloadData', () => {
       networkIsolation: false,
       allowedHosts: [],
       allowedPorts: [],
+      volumes: [],
     }
 
     const result = prepareCreateWorkloadData(SERVER, data)
@@ -260,6 +265,7 @@ describe('prepareCreateWorkloadData', () => {
       networkIsolation: false,
       allowedHosts: [],
       allowedPorts: [],
+      volumes: [],
     }
 
     const result = prepareCreateWorkloadData(SERVER, data)
@@ -281,6 +287,7 @@ describe('prepareCreateWorkloadData', () => {
       networkIsolation: false,
       allowedHosts: [],
       allowedPorts: [],
+      volumes: [],
     }
 
     const result = prepareCreateWorkloadData(serverWithoutPort, data)
@@ -302,6 +309,7 @@ describe('prepareCreateWorkloadData', () => {
       networkIsolation: false,
       allowedHosts: [],
       allowedPorts: [],
+      volumes: [],
     }
 
     const result = prepareCreateWorkloadData(SERVER, data)
@@ -450,8 +458,9 @@ describe('saveSecrets', () => {
       secrets: [],
       envVars: [],
       networkIsolation: true,
-      allowedHosts: ['example.com', '.subdomain.com'],
-      allowedPorts: ['8080', '443'],
+      allowedHosts: [{ value: 'example.com' }, { value: '.subdomain.com' }],
+      allowedPorts: [{ value: '8080' }, { value: '443' }],
+      volumes: [],
     }
 
     const result = prepareCreateWorkloadData(REGISTRY_SERVER, data)
@@ -475,8 +484,9 @@ describe('saveSecrets', () => {
       secrets: [],
       envVars: [],
       networkIsolation: false,
-      allowedHosts: ['example.com'],
-      allowedPorts: ['8080'],
+      allowedHosts: [{ value: 'example.com' }],
+      allowedPorts: [{ value: '8080' }],
+      volumes: [],
     }
 
     const result = prepareCreateWorkloadData(REGISTRY_SERVER, data)

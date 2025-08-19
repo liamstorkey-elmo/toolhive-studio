@@ -1,16 +1,16 @@
 import {
-  type Options,
   type PermissionsOutboundNetworkPermissions,
   type PostApiV1BetaSecretsDefaultKeysData,
   type RegistryImageMetadata,
   type SecretsSecretParameter,
   type V1CreateRequest,
   type V1CreateSecretResponse,
-} from '@/common/api/generated'
+} from '@api/types.gen'
+import type { Options } from '@api/client'
 import type { FormSchemaRunFromRegistry } from './get-form-schema-run-from-registry'
 import type { DefinedSecret, PreparedSecret } from '@/common/types/secrets'
 import type { UseMutateAsyncFunction } from '@tanstack/react-query'
-import { isEmptyEnvVar } from '@/common/lib/utils'
+import { getVolumes, isEmptyEnvVar } from '@/common/lib/utils'
 
 type SaveSecretFn = UseMutateAsyncFunction<
   V1CreateSecretResponse,
@@ -119,13 +119,15 @@ export function prepareCreateWorkloadData(
     ? {
         network: {
           outbound: {
-            allow_host: allowedHosts,
-            allow_port: allowedPorts.map((port) => parseInt(port, 10)),
+            allow_host: allowedHosts.map(({ value }) => value),
+            allow_port: allowedPorts.map(({ value }) => parseInt(value, 10)),
             insecure_allow_all: false,
           } as PermissionsOutboundNetworkPermissions,
         },
       }
     : undefined
+
+  const volumes = getVolumes(data.volumes ?? [])
 
   return {
     name: data.serverName,
@@ -137,6 +139,7 @@ export function prepareCreateWorkloadData(
     target_port: server.target_port,
     network_isolation: networkIsolation,
     permission_profile,
+    volumes,
     // ...rest does not include the omitted fields
   }
 }
