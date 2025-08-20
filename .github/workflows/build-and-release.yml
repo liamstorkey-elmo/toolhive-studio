@@ -20,7 +20,7 @@ jobs:
     strategy:
       matrix:
         arch: [x64, arm64]
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -64,7 +64,7 @@ jobs:
     strategy:
       matrix:
         arch: [x64, arm64]
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -113,7 +113,7 @@ jobs:
     strategy:
       matrix:
         arch: [x64, arm64]
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -164,7 +164,7 @@ jobs:
   create-release:
     needs: [build-windows, build-macos, build-linux]
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

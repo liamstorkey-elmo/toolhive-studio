@@ -23,7 +23,7 @@ describe('Clients Route', () => {
     expect(screen.getByText('VS Code - Copilot')).toBeInTheDocument()
     expect(screen.getByText('Cursor')).toBeInTheDocument()
     expect(screen.getByText('Claude Code')).toBeInTheDocument()
-    expect(screen.getAllByRole('switch')).toHaveLength(5)
+    expect(screen.getAllByRole('switch')).toHaveLength(6)
   })
 
   it.each([
